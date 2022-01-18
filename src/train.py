@@ -15,7 +15,6 @@ from src import utils
 
 log = utils.get_logger(__name__)
 
-
 def train(config: DictConfig) -> Optional[float]:
     """Contains training pipeline.
     Instantiates all PyTorch Lightning objects from config.

@@ -4,8 +4,8 @@
 defaults:
   - _self_
   - trainer: default.yaml
-  - model: mnist.yaml
-  - datamodule: mnist.yaml
+  - model: efficient.yaml
+  - datamodule: plant.yaml
   - callbacks: default.yaml
   - logger: null # set logger here or use command line (e.g. `python run.py logger=wandb`)
 
@@ -46,7 +46,7 @@ ignore_warnings: True
 test_after_training: True
 
 # seed for random number generators in pytorch, numpy and python.random
-seed: null
+seed: 2022
 
 # name of the run, should be used along with experiment mode
-name: null
+name: exp

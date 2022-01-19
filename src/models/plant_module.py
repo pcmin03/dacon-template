@@ -4,7 +4,7 @@ import torch
 import timm
 
 from pytorch_lightning import LightningModule
-from torchmetrics import MaxMetric
+from torchmetrics import MaxMetric, F1Score
 from torchmetrics.classification.accuracy import Accuracy
 
 # from src.models.components.simple_dense_net import SimpleDenseNet
@@ -49,8 +49,13 @@ class PlantCls(LightningModule):
         self.val_acc = Accuracy()
         self.test_acc = Accuracy()
 
+        self.train_f1 = F1Score(num_classes = model_parser.num_classes, average='macro')
+        self.val_f1 = F1Score(num_classes = model_parser.num_classes, average='macro')
+        self.test_f1 = F1Score(num_classes = model_parser.num_classes, average='macro')
+
         # for logging best so far validation accuracy
         self.val_acc_best = MaxMetric()
+        self.val_f1_best = MaxMetric()
 
     def forward(self, x: torch.Tensor):
         return self.model(x)
@@ -68,8 +73,10 @@ class PlantCls(LightningModule):
 
         # log train metrics
         acc = self.train_acc(preds, targets)
+        f1 = self.train_f1(preds, targets)
         self.log("train/loss", loss, on_step=False, on_epoch=True, prog_bar=False)
         self.log("train/acc", acc, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/f1", f1, on_step=False, on_epoch=True, prog_bar=True)
 
         # we can return here dict with any tensors
         # and then read it in some callback or in `training_epoch_end()`` below
@@ -85,23 +92,30 @@ class PlantCls(LightningModule):
 
         # log val metrics
         acc = self.val_acc(preds, targets)
+        f1 = self.val_f1(preds, targets)
         self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=False)
         self.log("val/acc", acc, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/f1", f1, on_step=False, on_epoch=True, prog_bar=True)
 
         return {"loss": loss, "preds": preds, "targets": targets}
 
     def validation_epoch_end(self, outputs: List[Any]):
         acc = self.val_acc.compute()  # get val accuracy from current epoch
+        f1 = self.val_f1.compute()  # get val accuracy from current epoch
         self.val_acc_best.update(acc)
+        self.val_f1_best.update(f1)
         self.log("val/acc_best", self.val_acc_best.compute(), on_epoch=True, prog_bar=True)
+        self.log("val/f1_best", self.val_f1_best.compute(), on_epoch=True, prog_bar=True)
 
     def test_step(self, batch: Any, batch_idx: int):
         loss, preds, targets = self.step(batch)
 
         # log test metrics
         acc = self.test_acc(preds, targets)
+        f1 = self.test_f1(preds, targets)
         self.log("test/loss", loss, on_step=False, on_epoch=True)
         self.log("test/acc", acc, on_step=False, on_epoch=True)
+        self.log("test/f1", f1, on_step=False, on_epoch=True)
 
         return {"loss": loss, "preds": preds, "targets": targets}
 
@@ -113,6 +127,10 @@ class PlantCls(LightningModule):
         self.train_acc.reset()
         self.test_acc.reset()
         self.val_acc.reset()
+
+        self.train_f1.reset()
+        self.test_f1.reset()
+        self.val_f1.reset()
 
     def configure_optimizers(self):
         """Choose what optimizers and learning-rate schedulers to use in your optimization.

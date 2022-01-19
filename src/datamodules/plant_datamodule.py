@@ -91,7 +91,7 @@ class PlantModule(LightningDataModule):
 
         folds = []
         kf = KFold(n_splits=5, shuffle=True, random_state=2022)
-        for train_idx, valid_idx in kf.split(train_jpg):
+        for train_idx, valid_idx in kf.split(train_jpg ):
             folds.append((train_idx, valid_idx))
         self.train_idx, self.valid_idx = folds[foldn]
 
@@ -109,10 +109,13 @@ class PlantModule(LightningDataModule):
         
         # load datasets only if they're not loaded already
         if not self.data_train and not self.data_val and not self.data_test:
-            print(self.train_idx,self.valid_idx)
             self.data_train = Plant(jpgpath[self.train_idx],labels[self.train_idx], mode='train', transform=self.transforms)
             self.data_val = Plant(jpgpath[self.valid_idx],labels[self.valid_idx], mode='valid', transform=self.transforms)
-            self.data_test = self.data_val
+
+            test_path = Path(self.hparams.test_data_dir).resolve()
+            test_jpg = np.array(list(test_path.glob('*/*.jpg')))
+            self.data_test = Plant(test_jpg,None, mode='test', transform=self.transforms)
+            
             # dataset = ConcatDataset(datasets=[trainset, testset])
             # self.data_train, self.data_val, self.data_test = random_split(
             #     dataset=dataset,

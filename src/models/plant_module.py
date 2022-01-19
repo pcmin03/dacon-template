@@ -4,11 +4,13 @@ import torch
 import timm
 
 from pytorch_lightning import LightningModule
-from torchmetrics import MaxMetric, F1Score
+from torchmetrics import MaxMetric, F1
 from torchmetrics.classification.accuracy import Accuracy
 
+import pandas as pd
 # from src.models.components.simple_dense_net import SimpleDenseNet
 
+from ..utils.general import predic2label
 
 class PlantCls(LightningModule):
     """
@@ -49,9 +51,9 @@ class PlantCls(LightningModule):
         self.val_acc = Accuracy()
         self.test_acc = Accuracy()
 
-        self.train_f1 = F1Score(num_classes = model_parser.num_classes, average='macro')
-        self.val_f1 = F1Score(num_classes = model_parser.num_classes, average='macro')
-        self.test_f1 = F1Score(num_classes = model_parser.num_classes, average='macro')
+        self.train_f1 = F1(num_classes = model_parser.num_classes, average='macro')
+        self.val_f1 = F1(num_classes = model_parser.num_classes, average='macro')
+        self.test_f1 = F1(num_classes = model_parser.num_classes, average='macro')
 
         # for logging best so far validation accuracy
         self.val_acc_best = MaxMetric()
@@ -108,18 +110,20 @@ class PlantCls(LightningModule):
         self.log("val/f1_best", self.val_f1_best.compute(), on_epoch=True, prog_bar=True)
 
     def test_step(self, batch: Any, batch_idx: int):
-        loss, preds, targets = self.step(batch)
-
+        preds,idxs = self.forward(batch)
+        
         # log test metrics
-        acc = self.test_acc(preds, targets)
-        f1 = self.test_f1(preds, targets)
-        self.log("test/loss", loss, on_step=False, on_epoch=True)
-        self.log("test/acc", acc, on_step=False, on_epoch=True)
-        self.log("test/f1", f1, on_step=False, on_epoch=True)
-
-        return {"loss": loss, "preds": preds, "targets": targets}
+        return {"preds": preds,"idxs":idxs}
 
     def test_epoch_end(self, outputs: List[Any]):
+        submission = pd.read_csv('/nfs2/personal/cmpark/dacon/dataset/sample_submission.csv')
+
+        preds = outputs['preds']
+        idxs = outputs['idxs']
+        
+        
+        # preds = predic2label(preds,idxs,submission)
+        
         pass
 
     def on_epoch_end(self):

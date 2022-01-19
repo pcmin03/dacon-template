@@ -36,6 +36,7 @@ class PlantModule(LightningDataModule):
     def __init__(
         self,
         data_dir: str = "data/",
+        test_data_dir : str = 'data/',
         train_val_test_split: Tuple[int, int, int] = (55_000, 5_000, 10_000),
         batch_size: int = 64,
         num_workers: int = 0,
@@ -105,7 +106,6 @@ class PlantModule(LightningDataModule):
         The `stage` can be used to differentiate whether it's called before trainer.fit()` or `trainer.test()`."""
 
         jpgpath, csvpath, labels = self.corss_validation(foldn = 0)
-        
         
         # load datasets only if they're not loaded already
         if not self.data_train and not self.data_val and not self.data_test:

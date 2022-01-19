@@ -26,7 +26,7 @@ class Plant(Dataset):
           img = transforms.ToTensor()(img)
 
         elif self.mode=='test':
-            return transforms.ToTensor()(img)
+            return transforms.ToTensor()(img),self.img_paths[idx].name('.jpg','')
         
         label = int(self.labels[idx][-1])
         

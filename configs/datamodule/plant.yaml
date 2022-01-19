@@ -1,8 +1,7 @@
 _target_: src.datamodules.plant_datamodule.PlantModule
 
-base_dir : /nfs2/personal/cmpark/dacon/dataset
-data_dir: {base_dir}/train/ # data_dir is specified in config.yaml
-test_data_dir : {base_dir}/test/
+data_dir: /nfs2/personal/cmpark/dacon/dataset/train/ # data_dir is specified in config.yaml
+test_data_dir : /nfs2/personal/cmpark/dacon/dataset/test/
 batch_size: 100
 train_val_test_split: [55_000, 5_000, 10_000]
 num_workers: 0

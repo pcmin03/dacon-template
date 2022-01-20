@@ -11,6 +11,8 @@ import pandas as pd
 # from src.models.components.simple_dense_net import SimpleDenseNet
 
 from ..utils.general import predic2label
+import torch.nn.functional as F 
+from joblib import Parallel, delayed
 
 class PlantCls(LightningModule):
     """
@@ -58,6 +60,7 @@ class PlantCls(LightningModule):
         # for logging best so far validation accuracy
         self.val_acc_best = MaxMetric()
         self.val_f1_best = MaxMetric()
+        self.submission = pd.read_csv('/nfs2/personal/cmpark/dacon/dataset/sample_submission.csv')
 
     def forward(self, x: torch.Tensor):
         return self.model(x)
@@ -110,16 +113,23 @@ class PlantCls(LightningModule):
         self.log("val/f1_best", self.val_f1_best.compute(), on_epoch=True, prog_bar=True)
 
     def test_step(self, batch: Any, batch_idx: int):
-        preds,idxs = self.forward(batch)
+        preds = self.forward(batch[0])
+        preds = torch.argmax(preds, dim=1).cpu().detach().numpy()
         
-        # log test metrics
-        return {"preds": preds,"idxs":idxs}
+        lst = Parallel(n_jobs=4,prefer="threads")(delayed(self.write_csv)(i,j) for i,j in zip(batch[1],preds))
+        
+        return {"preds": preds,"idxs":batch[1]}
+    def write_csv(self,idx,preds): 
+        self.submission[idx] = preds
 
     def test_epoch_end(self, outputs: List[Any]):
-        submission = pd.read_csv('/nfs2/personal/cmpark/dacon/dataset/sample_submission.csv')
+        
+        self.submission.to_csv('sample.csv')
+        # print(outputs)
+        # submission = pd.read_csv('/nfs2/personal/cmpark/dacon/dataset/sample_submission.csv')
 
-        preds = outputs['preds']
-        idxs = outputs['idxs']
+        # preds = outputs['preds']
+        # idxs = outputs['idxs']
         
         
         # preds = predic2label(preds,idxs,submission)

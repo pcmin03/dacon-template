@@ -3,7 +3,7 @@ import torch.nn as nn
 import torchvision.transforms as transforms
 import cv2
 import numpy as np
-
+from pathlib import Path
 class Plant(Dataset):
     def __init__(self, images, labels, mode='train',transform=None):
         
@@ -26,7 +26,10 @@ class Plant(Dataset):
           img = transforms.ToTensor()(img)
 
         elif self.mode=='test':
-            return transforms.ToTensor()(img),self.img_paths[idx].name('.jpg','')
+          
+          # idx_name = Path(self.img_paths[idx]).name('.jpg','')
+          # print(idx_name)
+          return transforms.ToTensor()(img),self.img_paths[idx].name.replace('.jpg','')
         
         label = int(self.labels[idx][-1])
         

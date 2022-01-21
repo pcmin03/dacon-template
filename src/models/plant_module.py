@@ -10,7 +10,7 @@ from torchmetrics.classification.accuracy import Accuracy
 import pandas as pd
 # from src.models.components.simple_dense_net import SimpleDenseNet
 
-from ..utils.general import predic2label
+from ..utils.general import label_decoder
 import torch.nn.functional as F 
 from joblib import Parallel, delayed
 
@@ -60,8 +60,8 @@ class PlantCls(LightningModule):
         # for logging best so far validation accuracy
         self.val_acc_best = MaxMetric()
         self.val_f1_best = MaxMetric()
-        self.submission = pd.read_csv('/nfs2/personal/cmpark/dacon/dataset/sample_submission.csv')
-
+        # self.submission = pd.read_csv('/nfs2/personal/cmpark/dacon/dataset/sample_submission.csv')
+        self.submission = pd.DataFrame(columns=['image','label'])
     def forward(self, x: torch.Tensor):
         return self.model(x)
 
@@ -94,7 +94,6 @@ class PlantCls(LightningModule):
 
     def validation_step(self, batch: Any, batch_idx: int):
         loss, preds, targets = self.step(batch)
-
         # log val metrics
         acc = self.val_acc(preds, targets)
         f1 = self.val_f1(preds, targets)
@@ -116,23 +115,21 @@ class PlantCls(LightningModule):
         preds = self.forward(batch[0])
         preds = torch.argmax(preds, dim=1).cpu().detach().numpy()
         
-        lst = Parallel(n_jobs=4,prefer="threads")(delayed(self.write_csv)(i,j) for i,j in zip(batch[1],preds))
-        
+        # lst = Parallel(n_jobs=16,prefer="threads")(delayed(self.write_csv)(i,j) for i,j in zip(batch[1],preds))
+        for i,j in zip(batch[1],preds):
+            self.write_csv(i,j)
+        # self.submission.to_csv(f'sample{batch_idx}.csv')
         return {"preds": preds,"idxs":batch[1]}
-    def write_csv(self,idx,preds): 
-        self.submission[idx] = preds
-
+    def write_csv(self,idx,preds):
+        label_name=label_decoder[preds] 
+        # df=df.append({'image' : 'Apple' , 'label' : 23} , ignore_index=True)
+        self.submission = self.submission.append({'image':int(idx),'label':str(label_name)} , ignore_index=True)
+        # self.submission.loc[self.submission.image == int(idx),'label'] = str(label_name)
+        # print(self.submission.loc[self.submission.image == int(idx),'label'])
     def test_epoch_end(self, outputs: List[Any]):
         
-        self.submission.to_csv('sample.csv')
-        # print(outputs)
-        # submission = pd.read_csv('/nfs2/personal/cmpark/dacon/dataset/sample_submission.csv')
-
-        # preds = outputs['preds']
-        # idxs = outputs['idxs']
-        
-        
-        # preds = predic2label(preds,idxs,submission)
+        self.submission = self.submission.sort_values(by='image')
+        self.submission.to_csv(f'sampleas123df.csv', index=False)
         
         pass
 

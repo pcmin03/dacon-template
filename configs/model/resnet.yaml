@@ -1,0 +1,10 @@
+_target_: src.models.plant_module.PlantCls
+
+model:
+  name : resnet50
+  init_weight: '/pathos2/data2/dongheekim/path-tnbc-cell/vissl/converted_vissl_rn50-plant.pth' # weight path
+  pretrained : True
+  num_classes : 25
+lr: 0.001
+weight_decay: 0.0005
+

@@ -72,9 +72,9 @@ def train(config: DictConfig) -> Optional[float]:
     )
 
     # Train the model
-    # if config.training == True:
-    #     log.info("Starting training!")
-    #     trainer.fit(model=model, datamodule=datamodule)
+    if config.training == True:
+        log.info("Starting training!")
+        trainer.fit(model=model, datamodule=datamodule)
 
     # Get metric score for hyperparameter optimization
     optimized_metric = config.get("optimized_metric")
@@ -86,7 +86,7 @@ def train(config: DictConfig) -> Optional[float]:
     score = trainer.callback_metrics.get(optimized_metric)
 
     # Test the model
-    ckpt_path = "/nfs2/personal/cmpark/dacon/dacon-template/logs/runs/2022-01-19/05-55-05/checkpoints/epoch_008.ckpt"
+    # ckpt_path = "/pathos2/nfs2/personal/cmpark/dacon/dacon-template/logs/runs/2022-01-19/05-55-05/checkpoints/epoch_008.ckpt"
     if config.get("test_after_training") and not config.trainer.get("fast_dev_run"):
         log.info("Starting testing!")
         trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path)

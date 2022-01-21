@@ -57,8 +57,7 @@ def predic2label(predic):
   return np.array(lst)
 
 
-def savecsv(prediclist,idx,save_path):
-  
-  = np.stack(idx,prediclist)
-  pd.DataFrame()
-  return 
+# def savecsv(prediclist,idx,save_path):
+#   = np.stack(idx,prediclist)
+#   pd.DataFrame()
+#   return 

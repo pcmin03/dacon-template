@@ -102,7 +102,7 @@ class PlantModule(LightningDataModule):
         label_list = np.array(Parallel(n_jobs=32,prefer="threads")(delayed(self.json2cls)(i) for i in tqdm(train_json)))
 
         label_unique = {key:idx for idx, key in enumerate(self.label_description)}
-        label_decoder = {val:key for key, val in label_encoder.items()}
+        self.label_decoder = {val:key for key, val in label_unique.items()}
 
         labels = [label_unique[k] for k in label_list[:,-1]]
         label_list[:,-1] = labels

@@ -3,7 +3,7 @@ _target_: src.models.plant_module.PlantCls
 model:
   name : efficientnet_b0
   pretrained : True
-  num_classes : 25
+  num_classes : 111
 lr: 0.001
 weight_decay: 0.0005
 

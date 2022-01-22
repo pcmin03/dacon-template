@@ -7,7 +7,7 @@ defaults:
   - model: efficient.yaml
   - datamodule: plant.yaml
   - callbacks: default.yaml
-  - logger: null # set logger here or use command line (e.g. `python run.py logger=wandb`)
+  - logger: wandb # set logger here or use command line (e.g. `python run.py logger=wandb`)
 
   # modes are special collections of config options for different purposes, e.g. debugging
   - mode: default.yaml

@@ -72,7 +72,7 @@ class PlantModule(LightningDataModule):
                 for risk_code in risk:
                     label = f'{key}_{disease_code}_{risk_code}'
                     self.label_description[label] = f'{crop[key]}_{disease[key][disease_code]}_{risk[risk_code]}'
-
+        
     def json2cls(self,jsonfile): 
         label_type = []
         with open(str(jsonfile), 'r') as f:
@@ -103,7 +103,7 @@ class PlantModule(LightningDataModule):
 
         label_unique = {key:idx for idx, key in enumerate(self.label_description)}
         self.label_decoder = {val:key for key, val in label_unique.items()}
-
+        print(label_unique)
         labels = [label_unique[k] for k in label_list[:,-1]]
         label_list[:,-1] = labels
 

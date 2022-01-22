@@ -150,6 +150,16 @@ class PlantCls(LightningModule):
         See examples here:
             https://pytorch-lightning.readthedocs.io/en/latest/common/lightning_module.html#configure-optimizers
         """
-        return torch.optim.Adam(
+        optimizer = torch.optim.Adam(
             params=self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay
         )
+
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[50,80], gamma=0.1, last_epoch=-1, verbose=False)
+
+        lr_scheduler_config = {
+            "scheduler": scheduler,
+            "interval": "epoch",
+            "frequency":1,
+        }
+
+        return {"optimizer":optimizer, "lr_scheduler":lr_scheduler_config}

@@ -46,11 +46,11 @@ class PlantCls(LightningModule):
         
         self.model = timm.create_model(model_parser.name,pretrained = model_parser.pretrained, num_classes = model_parser.num_classes)
         # import pdb;pdb.set_trace()
-        if model_parser.init_weight is not None:
-            weight = torch.load(model_parser.init_weight)
-            self.model.load_state_dict(weight, strict=False)
-            # checkpointer = PlantCheckpointer(model=self.model)
-            # checkpointer.load(model_parser.init_weight)
+        if model_parser.init_weight in locals():
+        #     weight = torch.load(model_parser.init_weight)
+        #     self.model.load_state_dict(weight, strict=False)
+            checkpointer = PlantCheckpointer(model=self.model)
+            checkpointer.load(model_parser.init_weight)
 
         # loss function
         self.criterion = torch.nn.CrossEntropyLoss()
@@ -172,5 +172,5 @@ class PlantCls(LightningModule):
             "frequency":1,
         }
         
-        return optimizer
-        # return {"optimizer":optimizer, "lr_scheduler":lr_scheduler_config}
+        # return optimizer
+        return {"optimizer":optimizer, "lr_scheduler":lr_scheduler_config}

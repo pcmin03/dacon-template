@@ -10,7 +10,7 @@ from torchmetrics.classification.accuracy import Accuracy
 import pandas as pd
 # from src.models.components.simple_dense_net import SimpleDenseNet
 
-from ..utils.general import label_decoder
+from ..utils.general import label_decoder, PlantCheckpointer
 import torch.nn.functional as F 
 from joblib import Parallel, delayed
 
@@ -42,7 +42,13 @@ class PlantCls(LightningModule):
         self.save_hyperparameters(logger=False)
         model_parser=self.hparams.model
         
-        self.model = timm.create_model(model_parser.name,pretrained = model_parser.pretrained,num_classes = model_parser.num_classes)
+        self.model = timm.create_model(model_parser.name,pretrained = model_parser.pretrained, num_classes = model_parser.num_classes)
+        # import pdb;pdb.set_trace()
+        if model_parser.init_weight is not None:
+            weight = torch.load(model_parser.init_weight)
+            self.model.load_state_dict(weight, strict=False)
+            # checkpointer = PlantCheckpointer(model=self.model)
+            # checkpointer.load(model_parser.init_weight)
 
         # loss function
         self.criterion = torch.nn.CrossEntropyLoss()
@@ -161,5 +167,6 @@ class PlantCls(LightningModule):
             "interval": "epoch",
             "frequency":1,
         }
-
-        return {"optimizer":optimizer, "lr_scheduler":lr_scheduler_config}
+        
+        return optimizer
+        # return {"optimizer":optimizer, "lr_scheduler":lr_scheduler_config}

@@ -103,7 +103,7 @@ class PlantModule(LightningDataModule):
 
         label_unique = {key:idx for idx, key in enumerate(self.label_description)}
         self.label_decoder = {val:key for key, val in label_unique.items()}
-        print(label_unique)
+        # print(label_unique)
         labels = [label_unique[k] for k in label_list[:,-1]]
         label_list[:,-1] = labels
 

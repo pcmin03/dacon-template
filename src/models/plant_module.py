@@ -10,7 +10,7 @@ from torchmetrics.classification.accuracy import Accuracy
 import pandas as pd
 # from src.models.components.simple_dense_net import SimpleDenseNet
 
-from ..utils.general import label_decoder, PlantCheckpointer
+# from ..utils.general import label_decoder, PlantCheckpointer
 import torch.nn.functional as F 
 from joblib import Parallel, delayed
 
@@ -46,12 +46,18 @@ class PlantCls(LightningModule):
         
         self.model = timm.create_model(model_parser.name,pretrained = model_parser.pretrained, num_classes = model_parser.num_classes)
         # import pdb;pdb.set_trace()
+<<<<<<< HEAD
         if hasattr(model_parser, 'init_weight'):
             # if model_parser.init_weight in locals():
             # weight = torch.load(model_parser.init_weight)
         #     self.model.load_state_dict(weight, strict=False)
             checkpointer = PlantCheckpointer(model=self.model)
             checkpointer.load(model_parser.init_weight)
+=======
+        # if model_parser.init_weight in locals():
+        #     checkpointer = PlantCheckpointer(model=self.model)
+        #     checkpointer.load(model_parser.init_weight)
+>>>>>>> c17eebbf501748bdc202c692c3d5cba7459f2f0c
 
         # loss function
         self.criterion = torch.nn.CrossEntropyLoss()

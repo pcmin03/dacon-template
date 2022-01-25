@@ -7,7 +7,7 @@ from pytorch_lightning import LightningDataModule
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
 from torchvision.transforms import transforms
 
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold,StratifiedKFold
 
 from tqdm import tqdm 
 
@@ -60,23 +60,6 @@ class PlantModule(LightningDataModule):
         self.data_val: Optional[Dataset] = None
         self.data_test: Optional[Dataset] = None
 
-        # crop = {'1':'딸기','2':'토마토','3':'파프리카','4':'오이','5':'고추','6':'시설포도'}
-        # disease = {'1':{'a1':'딸기잿빛곰팡이병','a2':'딸기흰가루병','b1':'냉해피해','b6':'다량원소결핍 (N)','b7':'다량원소결핍 (P)','b8':'다량원소결핍 (K)'},
-        #         '2':{'a5':'토마토흰가루병','a6':'토마토잿빛곰팡이병','b2':'열과','b3':'칼슘결핍','b6':'다량원소결핍 (N)','b7':'다량원소결핍 (P)','b8':'다량원소결핍 (K)'},
-        #         '3':{'a9':'파프리카흰가루병','a10':'파프리카잘록병','b3':'칼슘결핍','b6':'다량원소결핍 (N)','b7':'다량원소결핍 (P)','b8':'다량원소결핍 (K)'},
-        #         '4':{'a3':'오이노균병','a4':'오이흰가루병','b1':'냉해피해','b6':'다량원소결핍 (N)','b7':'다량원소결핍 (P)','b8':'다량원소결핍 (K)'},
-        #         '5':{'a7':'고추탄저병','a8':'고추흰가루병','b3':'칼슘결핍','b6':'다량원소결핍 (N)','b7':'다량원소결핍 (P)','b8':'다량원소결핍 (K)'},
-        #         '6':{'a11':'시설포도탄저병','a12':'시설포도노균병','b4':'일소피해','b5':'축과병'}}
-        # risk = {'1':'초기','2':'중기','3':'말기'}
-
-        # self.label_description = {}
-        # for key, value in disease.items():
-        #     self.label_description[f'{key}_00_0'] = f'{crop[key]}_정상'
-        #     for disease_code in value:
-        #         for risk_code in risk:
-        #             label = f'{key}_{disease_code}_{risk_code}'
-        #             self.label_description[label] = f'{crop[key]}_{disease[key][disease_code]}_{risk[risk_code]}'
-        
     def json2cls(self,jsonfile): 
         label_type = []
         with open(str(jsonfile), 'r') as f:
@@ -116,8 +99,10 @@ class PlantModule(LightningDataModule):
         label_list[:,-1] = labels
 
         folds = []
-        kf = KFold(n_splits=5, shuffle=True, random_state=2022)
-        for train_idx, valid_idx in kf.split(train_jpg ):
+        # kf = KFold(n_splits=5, shuffle=True, random_state=2022)
+        kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=2022)
+        
+        for train_idx, valid_idx in kf.split(train_jpg,np.array(label_list[:,-1])):
             folds.append((train_idx, valid_idx))
         self.train_idx, self.valid_idx = folds[foldn]
 
@@ -137,16 +122,13 @@ class PlantModule(LightningDataModule):
             self.data_train = Plant(jpgpath[self.train_idx],labels[self.train_idx], mode='train', transform=self.transforms)
             self.data_val = Plant(jpgpath[self.valid_idx],labels[self.valid_idx], mode='valid', transform=self.transforms)
 
-            test_path = Path(self.hparams.test_data_dir).resolve()
-            test_jpg = np.array(list(test_path.glob('*/*.jpg')))
-            self.data_test = Plant(test_jpg,None, mode='test', transform=self.transforms)
             
-            # dataset = ConcatDataset(datasets=[trainset, testset])
-            # self.data_train, self.data_val, self.data_test = random_split(
-            #     dataset=dataset,
-            #     lengths=self.hparams.train_val_test_split,
-            #     generator=torch.Generator().manual_seed(2022),
-            # )
+            # if self.hparams.training  == True : 
+            self.data_test = self.data_val
+            # else : 
+            #     test_path = Path(self.hparams.test_data_dir).resolve()
+            #     test_jpg = np.array(list(test_path.glob('*/*.jpg')))
+            #     self.data_test = Plant(test_jpg,None, mode='test', transform=self.transforms)
 
     def train_dataloader(self):
         return DataLoader(

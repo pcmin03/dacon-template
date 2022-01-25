@@ -99,7 +99,8 @@ class PlantModule(LightningDataModule):
         folds = []
         # kf = KFold(n_splits=5, shuffle=True, random_state=2022)
         kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=2022)
-        for train_idx, valid_idx in kf.split(train_jpg,np.array(label_list)):
+        
+        for train_idx, valid_idx in kf.split(train_jpg,np.array(label_list[:,-1])):
             folds.append((train_idx, valid_idx))
         self.train_idx, self.valid_idx = folds[foldn]
 

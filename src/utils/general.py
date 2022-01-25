@@ -9,7 +9,7 @@ import shutil
 
 from joblib import Parallel, delayed
 
-from fvcore.common.checkpoint import Checkpointer
+# from fvcore.common.checkpoint import Checkpointer
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Tuple
 
 crop = {'1':'딸기','2':'토마토','3':'파프리카','4':'오이','5':'고추','6':'시설포도'}

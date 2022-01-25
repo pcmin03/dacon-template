@@ -121,13 +121,6 @@ class PlantModule(LightningDataModule):
             test_path = Path(self.hparams.test_data_dir).resolve()
             test_jpg = np.array(list(test_path.glob('*/*.jpg')))
             self.data_test = Plant(test_jpg,None, mode='test', transform=self.transforms)
-            
-            # dataset = ConcatDataset(datasets=[trainset, testset])
-            # self.data_train, self.data_val, self.data_test = random_split(
-            #     dataset=dataset,
-            #     lengths=self.hparams.train_val_test_split,
-            #     generator=torch.Generator().manual_seed(2022),
-            # )
 
     def train_dataloader(self):
         return DataLoader(

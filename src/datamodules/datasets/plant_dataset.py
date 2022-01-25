@@ -10,6 +10,7 @@ class Plant(Dataset):
         self.img_paths = images
         self.labels = labels
         self.mode = mode
+        self.transform = transform
 
     def __len__(self):
         return len(self.img_paths)
@@ -17,19 +18,19 @@ class Plant(Dataset):
     def __getitem__(self, idx):
         
         img = cv2.imread(str(self.img_paths[idx]))[...,::-1]
-        img = cv2.resize(img, (384, 512))
+        img = cv2.resize(img, (256, 256))
 
         if self.mode=='train':  
-          img = transforms.ToTensor()(img)
+          img = self.transform(img)
 
         elif self.mode=='valid':  
-          img = transforms.ToTensor()(img)
+          img = self.transform(img)
 
         elif self.mode=='test':
           
           # idx_name = Path(self.img_paths[idx]).name('.jpg','')
           # print(idx_name)
-          return transforms.ToTensor()(img),self.img_paths[idx].name.replace('.jpg','')
+          return self.transform(img),self.img_paths[idx].name.replace('.jpg','')
         
         label = int(self.labels[idx][-1])
         

@@ -1,7 +1,7 @@
 _target_: src.models.plant_module.PlantCls
 
 model:
-  name : efficientnet_b0
+  name : efficientnet_b2
   pretrained : True
   num_classes : 44
 lr: 0.001

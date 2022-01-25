@@ -7,7 +7,7 @@ from pytorch_lightning import LightningDataModule
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
 from torchvision.transforms import transforms
 
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold,StratifiedKFold
 
 from tqdm import tqdm 
 
@@ -97,8 +97,9 @@ class PlantModule(LightningDataModule):
         label_list[:,-1] = labels
 
         folds = []
-        kf = KFold(n_splits=5, shuffle=True, random_state=2022)
-        for train_idx, valid_idx in kf.split(train_jpg ):
+        # kf = KFold(n_splits=5, shuffle=True, random_state=2022)
+        kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=2022)
+        for train_idx, valid_idx in kf.split(train_jpg,np.array(label_list)):
             folds.append((train_idx, valid_idx))
         self.train_idx, self.valid_idx = folds[foldn]
 
@@ -118,9 +119,13 @@ class PlantModule(LightningDataModule):
             self.data_train = Plant(jpgpath[self.train_idx],labels[self.train_idx], mode='train', transform=self.transforms)
             self.data_val = Plant(jpgpath[self.valid_idx],labels[self.valid_idx], mode='valid', transform=self.transforms)
 
-            test_path = Path(self.hparams.test_data_dir).resolve()
-            test_jpg = np.array(list(test_path.glob('*/*.jpg')))
-            self.data_test = Plant(test_jpg,None, mode='test', transform=self.transforms)
+            
+            # if self.hparams.training  == True : 
+            self.data_test = self.data_val
+            # else : 
+            #     test_path = Path(self.hparams.test_data_dir).resolve()
+            #     test_jpg = np.array(list(test_path.glob('*/*.jpg')))
+            #     self.data_test = Plant(test_jpg,None, mode='test', transform=self.transforms)
 
     def train_dataloader(self):
         return DataLoader(

@@ -69,9 +69,11 @@ class PlantModule(LightningDataModule):
         
         # data transformations
         self.transforms = transforms.Compose(
-            [transforms.ToTensor(),
-            # transforms.RandomResizedCrop((224,224)),
-            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),]
+            [
+                transforms.ToTensor(),
+                transforms.RandomResizedCrop((224,224)),
+                transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+            ]
         )
 
         self.data_train: Optional[Dataset] = None

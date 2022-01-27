@@ -43,6 +43,26 @@ class PlantModule(LightningDataModule):
         pin_memory: bool = False,
     ):
         super().__init__()
+        self.binary_mask = {'1_00_0': 0,'2_00_0': 0,'2_a5_2': 1,'3_00_0': 0,'3_a9_1': 1,
+            '3_a9_2': 1,'3_a9_3': 1,'3_b3_1': 1,'3_b6_1': 1,'3_b7_1': 1,
+            '3_b8_1': 1,'4_00_0': 0,'5_00_0': 1,'5_a7_2': 1,'5_b6_1': 1,
+            '5_b7_1': 1,'5_b8_1': 1,'6_00_0': 0,'6_a11_1': 1,'6_a11_2': 1,
+            '6_a12_1': 1,'6_a12_2': 1,'6_b4_1': 1,'6_b4_3': 1,'6_b5_1': 1
+                }
+
+        self.positive_label = {'1_00_0': 0,'2_00_0': 0,'2_a5_2': 1,'3_00_0': 0,'3_a9_1': 2,
+            '3_a9_2': 3,'3_a9_3': 4,'3_b3_1': 5,'3_b6_1': 6,'3_b7_1': 7,
+            '3_b8_1': 8,'4_00_0': 0,'5_00_0': 9,'5_a7_2': 10,'5_b6_1': 11,
+            '5_b7_1': 12,'5_b8_1': 13,'6_00_0': 0,'6_a11_1': 14,'6_a11_2': 15,
+            '6_a12_1': 16,'6_a12_2': 17,'6_b4_1': 18,'6_b4_3': 19,'6_b5_1': 20
+                }
+        self.negative_label = {'1_00_0': 1,'2_00_0': 2,'2_a5_2': 0,'3_00_0': 3,
+            '3_a9_1': 0,'3_a9_2': 0,'3_a9_3': 0,'3_b3_1': 0,'3_b6_1': 0,
+            '3_b7_1': 0,'3_b8_1': 0,'4_00_0': 4,'5_00_0': 0,'5_a7_2': 0,
+            '5_b6_1': 0,'5_b7_1': 0,'5_b8_1': 0,'6_00_0': 5,'6_a11_1': 0,
+            '6_a11_2': 0,'6_a12_1': 0,'6_a12_2': 0,'6_b4_1': 0,'6_b4_3': 0,
+            '6_b5_1': 0
+                }
 
         # this line allows to access init params with 'self.hparams' attribute
         self.save_hyperparameters(logger=False)
@@ -72,7 +92,7 @@ class PlantModule(LightningDataModule):
 
     @property
     def num_classes(self) -> int:
-        return 32
+        return 19
 
     def corss_validation(self,foldn): 
         
@@ -93,18 +113,26 @@ class PlantModule(LightningDataModule):
         self.label_decoder = {val:key for key, val in label_unique.items()}
         # print({val:key for key, val in label_unique.items()})
         
-        labels = [label_unique[k] for k in label_list[:,-1]]
-        label_list[:,-1] = labels
+        labels = np.array([self.negative_label[k] for k in label_list[:,-1]])
+
+        # filtering label zero image
+        _,locat = np.unique(labels,return_inverse=True)
+        
+        train_jpg = train_jpg[locat!=0]
+        label_list = label_list[locat!=0]
+        labels = np.array(labels[locat!=0]) - 1
+
+        label_list[:,-1] = labels 
 
         folds = []
+
         # kf = KFold(n_splits=5, shuffle=True, random_state=2022)
         kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=2022)
-        
+
         for train_idx, valid_idx in kf.split(train_jpg,np.array(label_list[:,-1])):
             folds.append((train_idx, valid_idx))
+
         self.train_idx, self.valid_idx = folds[foldn]
-
-
         return train_jpg, train_csv,label_list
 
 
@@ -122,11 +150,11 @@ class PlantModule(LightningDataModule):
 
             
             # if self.hparams.training  == True : 
-            self.data_test = self.data_val
+            # self.data_test = self.data_val
             # else : 
-            #     test_path = Path(self.hparams.test_data_dir).resolve()
-            #     test_jpg = np.array(list(test_path.glob('*/*.jpg')))
-            #     self.data_test = Plant(test_jpg,None, mode='test', transform=self.transforms)
+            test_path = Path(self.hparams.test_data_dir).resolve()
+            test_jpg = np.array(list(test_path.glob('*/*.jpg')))
+            self.data_test = Plant(test_jpg,None, mode='test', transform=self.transforms)
 
     def train_dataloader(self):
         return DataLoader(

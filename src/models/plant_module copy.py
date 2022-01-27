@@ -45,7 +45,6 @@ class PlantCls(LightningModule):
         model_parser = self.hparams.model
         
         self.model = timm.create_model(model_parser.name,pretrained = model_parser.pretrained, num_classes = model_parser.num_classes)
-        
         # import pdb;pdb.set_trace()
         # if model_parser.init_weight in locals():
         #     checkpointer = PlantCheckpointer(model=self.model)

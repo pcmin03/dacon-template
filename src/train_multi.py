@@ -87,7 +87,6 @@ def train(config: DictConfig) -> Optional[float]:
 
     # Test the model
     # ckpt_path = "/pathos2/nfs2/personal/cmpark/dacon/dacon-template/logs/runs/2022-01-19/05-55-05/checkpoints/epoch_008.ckpt"
-    ckpt_path = '/nfs2/personal/cmpark/dacon/dacon-template/logs/runs/2022-01-26/14-04-02/checkpoints/epoch_018.ckpt'
     if config.get("test_after_training") and not config.trainer.get("fast_dev_run"):
         log.info("Starting testing!")
         trainer.test(model=model, datamodule=datamodule, ckpt_path=config.checkpoint_path)

@@ -11,34 +11,34 @@ class Plant(Dataset):
         self.img_paths = images
         self.labels = labels
         self.mode = mode
-<<<<<<< HEAD
+
         self.transform = A.Compose([
         A.HorizontalFlip(p=0.5),
         A.RandomRotate90(p=0.5)
         # A.RandomBrightnessContrast(p=0.2),
     ])
-=======
-        self.transform = transform
 
->>>>>>> 9d7c4c5f77d252715ec09cd5c070ebb60d88b1e5
+#         self.transform = transform
+
+# >>>>>>> 9d7c4c5f77d252715ec09cd5c070ebb60d88b1e5
     def __len__(self):
         return len(self.img_paths)
 
     def __getitem__(self, idx):
         
         img = cv2.imread(str(self.img_paths[idx]))[...,::-1]
-<<<<<<< HEAD
+# <<<<<<< HEAD
         img = cv2.resize(img, (384, 384))
 
         if self.mode=='train':  
           result = self.transform(image=img)
           img = transforms.ToTensor()(result['image'])
-=======
-        img = cv2.resize(img, (256, 256))
+# =======
+#         img = cv2.resize(img, (256, 256))
 
-        if self.mode=='train':  
-          img = self.transform(img)
->>>>>>> 9d7c4c5f77d252715ec09cd5c070ebb60d88b1e5
+        # if self.mode=='train':  
+        #   img = self.transform(img)
+# >>>>>>> 9d7c4c5f77d252715ec09cd5c070ebb60d88b1e5
 
         elif self.mode=='valid':  
           img = self.transform(img)

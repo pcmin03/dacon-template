@@ -62,7 +62,6 @@ class PlantCls(LightningModule):
 
         # loss function
         self.criterion = torch.nn.CrossEntropyLoss()
-        # self.criterion2 = torch.nn.NLLLoss()
 
         # use separate metric instance for train, val and test step
         # to ensure a proper reduction over the epoch

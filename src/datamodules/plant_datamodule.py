@@ -41,6 +41,7 @@ class PlantModule(LightningDataModule):
         batch_size: int = 64,
         num_workers: int = 0,
         pin_memory: bool = False,
+        crop: bool = False,
     ):
         super().__init__()
         self.binary_mask = {'1_00_0': 0,'2_00_0': 0,'2_a5_2': 1,'3_00_0': 0,'3_a9_1': 1,
@@ -96,12 +97,16 @@ class PlantModule(LightningDataModule):
     def num_classes(self) -> int:
         return 19
 
-    def corss_validation(self,foldn): 
+    def cross_validation(self,foldn): 
         
         BASE_PATH = Path(self.hparams.data_dir).resolve()
         
-        train_jpg = np.array(list(BASE_PATH.glob('*/*.jpg')))
-        train_json = np.array(list(BASE_PATH.glob('*/*.json')))
+        if self.hparams.crop == True:
+            train_jpg = np.array(list(BASE_PATH.glob('img_crop/*.jpg')))
+            train_json = np.array(list(BASE_PATH.glob('json/*.json')))
+        else:
+            train_jpg = np.array(list(BASE_PATH.glob('*/*.jpg')))
+            train_json = np.array(list(BASE_PATH.glob('*/*.json')))
         train_csv = np.array(list(BASE_PATH.glob('*/*.csv')))
         
         from joblib import Parallel, delayed
@@ -115,16 +120,18 @@ class PlantModule(LightningDataModule):
         self.label_decoder = {val:key for key, val in label_unique.items()}
         # print({val:key for key, val in label_unique.items()})
         
-        labels = np.array([self.negative_label[k] for k in label_list[:,-1]])
+        # labels = np.array([self.negative_label[k] for k in label_list[:,-1]])
 
-        # filtering label zero image
-        _,locat = np.unique(labels,return_inverse=True)
+        # # filtering label zero image
+        # _,locat = np.unique(labels,return_inverse=True)
         
-        train_jpg = train_jpg[locat!=0]
-        label_list = label_list[locat!=0]
-        labels = np.array(labels[locat!=0]) - 1
+        # train_jpg = train_jpg[locat!=0]
+        # label_list = label_list[locat!=0]
+        # labels = np.array(labels[locat!=0]) - 1
 
-        label_list[:,-1] = labels 
+        labels = [label_unique[k] for k in label_list[:,-1]]
+
+        label_list[:,-1] = labels
 
         folds = []
 
@@ -135,7 +142,7 @@ class PlantModule(LightningDataModule):
             folds.append((train_idx, valid_idx))
 
         self.train_idx, self.valid_idx = folds[foldn]
-        return train_jpg, train_csv,label_list
+        return train_jpg, train_csv, label_list
 
 
     def setup(self, stage: Optional[str] = None):
@@ -143,7 +150,7 @@ class PlantModule(LightningDataModule):
         This method is called by lightning twice for `trainer.fit()` and `trainer.test()`, so be careful if you do a random split!
         The `stage` can be used to differentiate whether it's called before trainer.fit()` or `trainer.test()`."""
 
-        jpgpath, csvpath, labels = self.corss_validation(foldn = 0)
+        jpgpath, csvpath, labels = self.cross_validation(foldn = 0)
         
         # load datasets only if they're not loaded already
         if not self.data_train and not self.data_val and not self.data_test:

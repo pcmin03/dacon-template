@@ -42,21 +42,29 @@ class PlantModule(LightningDataModule):
         num_workers: int = 0,
         pin_memory: bool = False,
         crop: bool = False,
+        label_type: str = 'total'
     ):
         super().__init__()
-        self.binary_mask = {'1_00_0': 0,'2_00_0': 0,'2_a5_2': 1,'3_00_0': 0,'3_a9_1': 1,
+        self.total_label = {'1_00_0': 0,'2_00_0': 1,'2_a5_2': 2,'3_00_0': 3,'3_a9_1': 4,
+            '3_a9_2': 5,'3_a9_3': 6,'3_b3_1': 7,'3_b6_1': 8,'3_b7_1': 9,
+            '3_b8_1': 10,'4_00_0': 11,'5_00_0': 12,'5_a7_2': 13,'5_b6_1': 14,
+            '5_b7_1': 15,'5_b8_1': 16,'6_00_0': 17,'6_a11_1': 18,'6_a11_2': 19,
+            '6_a12_1':20,'6_a12_2':21,'6_b4_1': 22,'6_b4_3': 23,'6_b5_1': 24
+                }
+
+        self.binary_label = {'1_00_0': 0,'2_00_0': 0,'2_a5_2': 1,'3_00_0': 0,'3_a9_1': 1,
             '3_a9_2': 1,'3_a9_3': 1,'3_b3_1': 1,'3_b6_1': 1,'3_b7_1': 1,
             '3_b8_1': 1,'4_00_0': 0,'5_00_0': 1,'5_a7_2': 1,'5_b6_1': 1,
             '5_b7_1': 1,'5_b8_1': 1,'6_00_0': 0,'6_a11_1': 1,'6_a11_2': 1,
             '6_a12_1': 1,'6_a12_2': 1,'6_b4_1': 1,'6_b4_3': 1,'6_b5_1': 1
                 }
-
         self.positive_label = {'1_00_0': 0,'2_00_0': 0,'2_a5_2': 1,'3_00_0': 0,'3_a9_1': 2,
             '3_a9_2': 3,'3_a9_3': 4,'3_b3_1': 5,'3_b6_1': 6,'3_b7_1': 7,
             '3_b8_1': 8,'4_00_0': 0,'5_00_0': 9,'5_a7_2': 10,'5_b6_1': 11,
             '5_b7_1': 12,'5_b8_1': 13,'6_00_0': 0,'6_a11_1': 14,'6_a11_2': 15,
             '6_a12_1': 16,'6_a12_2': 17,'6_b4_1': 18,'6_b4_3': 19,'6_b5_1': 20
                 }
+
         self.negative_label = {'1_00_0': 1,'2_00_0': 2,'2_a5_2': 0,'3_00_0': 3,
             '3_a9_1': 0,'3_a9_2': 0,'3_a9_3': 0,'3_b3_1': 0,'3_b6_1': 0,
             '3_b7_1': 0,'3_b8_1': 0,'4_00_0': 4,'5_00_0': 0,'5_a7_2': 0,
@@ -69,10 +77,17 @@ class PlantModule(LightningDataModule):
         self.save_hyperparameters(logger=False)
         
         # data transformations
-        self.transforms = transforms.Compose(
+        self.train_transforms = transforms.Compose(
             [
                 transforms.ToTensor(),
                 transforms.RandomResizedCrop((224,224)),
+                transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+            ]
+        )
+    
+        self.test_transform = transforms.Compose(
+            [
+                transforms.ToTensor(),
                 transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             ]
         )
@@ -80,7 +95,8 @@ class PlantModule(LightningDataModule):
         self.data_train: Optional[Dataset] = None
         self.data_val: Optional[Dataset] = None
         self.data_test: Optional[Dataset] = None
-
+        self.label_type = label_type
+        
     def json2cls(self,jsonfile): 
         label_type = []
         with open(str(jsonfile), 'r') as f:
@@ -112,23 +128,31 @@ class PlantModule(LightningDataModule):
         from joblib import Parallel, delayed
         # label_list consistance crops(bbox), risks, disesasse, labels 
         label_list = np.array(Parallel(n_jobs=32,prefer="threads")(delayed(self.json2cls)(i) for i in tqdm(train_json)))
-
-        label_unique = sorted(np.unique(label_list[:,-1]))
-        label_unique = {key:value for key,value in zip(label_unique, range(len(label_unique)))}
         
-        labels = np.array([self.binary_mask[k] for k in label_list[:,-1]])
-        self.label_decoder = {val:key for key, val in label_unique.items()}
+        if self.label_type == 'total': 
+            labels = np.array([self.total_label[k] for k in label_list[:,-1]])
+            label_convert = self.total_label
+        elif self.label_type == 'binary': 
+            labels = np.array([self.binary_label[k] for k in label_list[:,-1]])
+            label_convert = self.binary_label
+        else:
+            if self.label_type == 'positive': 
+                labels = np.array([self.positive_label[k] for k in label_list[:,-1]])
+                label_convert = self.positive_label
+            elif self.label_type == 'negative': 
+                labels = np.array([self.negative_label[k] for k in label_list[:,-1]])
+                label_convert = self.negative_label
+            
+            # filtering label zero image
+            _,locat = np.unique(labels,return_inverse=True)
+            
+            train_jpg = train_jpg[locat!=0]
+            label_list = label_list[locat!=0]
+            labels = np.array(labels[locat!=0]) - 1
 
-        # # filtering label zero image
-        # _,locat = np.unique(labels,return_inverse=True)
-        
-        # train_jpg = train_jpg[locat!=0]
-        # label_list = label_list[locat!=0]
-        # labels = np.array(labels[locat!=0]) - 1
+        label_list[:,-1] = labels
 
-        # labels = [label_unique[k] for k in label_list[:,-1]]
-
-        # label_list[:,-1] = labels
+        self.label_decoder = {val:key for key, val in label_convert.items()}
 
         folds = []
 
@@ -139,6 +163,7 @@ class PlantModule(LightningDataModule):
             folds.append((train_idx, valid_idx))
 
         self.train_idx, self.valid_idx = folds[foldn]
+        
         return train_jpg, train_csv, label_list
 
 
@@ -151,16 +176,16 @@ class PlantModule(LightningDataModule):
         
         # load datasets only if they're not loaded already
         if not self.data_train and not self.data_val and not self.data_test:
-            self.data_train = Plant(jpgpath[self.train_idx],labels[self.train_idx], mode='train', transform=self.transforms)
-            self.data_val = Plant(jpgpath[self.valid_idx],labels[self.valid_idx], mode='valid', transform=self.transforms)
+            self.data_train = Plant(jpgpath[self.train_idx],labels[self.train_idx], mode='train', transform=self.train_transforms)
+            self.data_val = Plant(jpgpath[self.valid_idx],labels[self.valid_idx], mode='valid', transform=self.test_transform)
 
             
             # if self.hparams.training  == True : 
-            # self.data_test = self.data_val
+            self.data_test = self.data_val
             # else : 
-            test_path = Path(self.hparams.test_data_dir).resolve()
-            test_jpg = np.array(list(test_path.glob('*/*.jpg')))
-            self.data_test = Plant(test_jpg,None, mode='test', transform=self.transforms)
+            # test_path = Path(self.hparams.test_data_dir).resolve()
+            # test_jpg = np.array(list(test_path.glob('*/*.jpg')))
+            # self.data_test = Plant(test_jpg,None, mode='test', transform=self.transforms)
 
     def train_dataloader(self):
         return DataLoader(

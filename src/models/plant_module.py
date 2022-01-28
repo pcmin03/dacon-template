@@ -13,7 +13,8 @@ import pandas as pd
 # from ..utils.general import label_decoder, PlantCheckpointer
 import torch.nn.functional as F 
 from joblib import Parallel, delayed
-
+import os
+from pathlib import Path
 class PlantCls(LightningModule):
     """
     Example of LightningModule for MNIST classification.
@@ -136,17 +137,23 @@ class PlantCls(LightningModule):
         # lst = Parallel(n_jobs=16,prefer="threads")(delayed(self.write_csv)(i,j) for i,j in zip(batch[1],preds))
         for i,j in zip(batch[1],preds):
             self.write_csv(i,j)
+        
+        
+        
         # self.submission.to_csv(f'sample{batch_idx}.csv')
-        return {"preds": preds,"idxs":batch[1]}
+        # return {"preds": preds,"idxs":batch[1]}
     def write_csv(self,idx,preds):
-        label_name = self.trainer.datamodule.label_decoder[preds] 
-        # df=df.append({'image' : 'Apple' , 'label' : 23} , ignore_index=True)
+        
+        label_name = self.trainer.datamodule.label_decoder[preds]
         self.submission = self.submission.append({'image':int(idx),'label':str(label_name)} , ignore_index=True)
         # self.submission.loc[self.submission.image == int(idx),'label'] = str(label_name)
         # print(self.submission.loc[self.submission.image == int(idx),'label'])
+        print(self.submission)
     def test_epoch_end(self, outputs: List[Any]):
         
+        
         self.submission = self.submission.sort_values(by='image')
+
         self.submission.to_csv(f'sampleas123df.csv', index=False)
         
         pass

@@ -1,5 +1,5 @@
 #!bin/bash
 cd ../
-# python run.py training=False datamodule.batch_size=100 trainer.gpus=1 checkpoint_path=/nfs2/personal/cmpark/dacon/dacon-template/logs/runs/2022-01-26/15-28-35/checkpoints/epoch_048.ckpt
+CUDA_VISIBLE_DEVICES=0 python run.py -cp=/nfs2/personal/cmpark/dacon/dacon-template/logs/runs/2022-01-26/15-28-35/.hydra/ -cn=config.yaml training=False datamodule.batch_size=100 trainer.gpus=1 checkpoint_path=/nfs2/personal/cmpark/dacon/dacon-template/logs/runs/2022-01-26/15-28-35/checkpoints/epoch_048.ckpt
 # CUDA_VISIBLE_DEVICES=1 python run.py -cp=/nfs2/personal/cmpark/dacon/dacon-template/logs/runs/2022-01-26/15-40-27/.hydra/ -cn=config.yaml training=False datamodule.batch_size=100 trainer.gpus=1 checkpoint_path=/nfs2/personal/cmpark/dacon/dacon-template/logs/runs/2022-01-26/15-40-27/checkpoints/epoch_024.ckpt
-CUDA_VISIBLE_DEVICES=2 python run.py -cp=/nfs2/personal/cmpark/dacon/dacon-template/logs/runs/2022-01-26/16-01-41/.hydra/ -cn=config.yaml training=False datamodule.batch_size=100 trainer.gpus=1 checkpoint_path=/nfs2/personal/cmpark/dacon/dacon-template/logs/runs/2022-01-26/16-01-41/checkpoints/epoch_006.ckpt
+# CUDA_VISIBLE_DEVICES=2 python run.py -cp=/nfs2/personal/cmpark/dacon/dacon-template/logs/runs/2022-01-26/16-01-41/.hydra/ -cn=config.yaml training=False datamodule.batch_size=100 trainer.gpus=1 checkpoint_path=/nfs2/personal/cmpark/dacon/dacon-template/logs/runs/2022-01-26/16-01-41/checkpoints/epoch_006.ckpt

@@ -139,8 +139,6 @@ class PlantCls(LightningModule):
         for i,j in zip(batch[1],preds):
             self.write_csv(i,j)
         
-        
-        
         # self.submission.to_csv(f'sample{batch_idx}.csv')
         # return {"preds": preds,"idxs":batch[1]}
     def write_csv(self,idx,preds):
@@ -149,7 +147,7 @@ class PlantCls(LightningModule):
         self.submission = self.submission.append({'image':int(idx),'label':str(label_name)} , ignore_index=True)
         # self.submission.loc[self.submission.image == int(idx),'label'] = str(label_name)
         # print(self.submission.loc[self.submission.image == int(idx),'label'])
-        print(self.submission)
+        
     def test_epoch_end(self, outputs: List[Any]):
         
         

@@ -79,14 +79,15 @@ class PlantModule(LightningDataModule):
         # data transformations
         self.train_transforms = transforms.Compose(
             [
+                # transforms.Resize((224,224)),
                 transforms.ToTensor(),
-                transforms.RandomResizedCrop((224,224)),
                 transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             ]
         )
     
         self.test_transform = transforms.Compose(
             [
+                # transforms.Resize((224,224)),
                 transforms.ToTensor(),
                 transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             ]
@@ -111,7 +112,7 @@ class PlantModule(LightningDataModule):
 
     @property
     def num_classes(self) -> int:
-        return 19
+        return len(self.label_decoder)
 
     def cross_validation(self,foldn): 
         

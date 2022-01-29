@@ -151,7 +151,9 @@ class PlantModule(LightningDataModule):
             train_jpg = train_jpg[locat!=0]
             label_list = label_list[locat!=0]
             labels = np.array(labels[locat!=0]) - 1
-
+            
+            label_convert = {val-1:key for key,val in label_convert.items() if key!= 0}
+            
         label_list[:,-1] = labels
 
         self.label_decoder = {val:key for key, val in label_convert.items()}

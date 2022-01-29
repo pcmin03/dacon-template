@@ -42,7 +42,8 @@ class PlantModule(LightningDataModule):
         num_workers: int = 0,
         pin_memory: bool = False,
         crop: bool = False,
-        label_type: str = 'total'
+        label_type: str = 'total',
+        fold: int = 0
     ):
         super().__init__()
         self.total_label = {'1_00_0': 0,'2_00_0': 1,'2_a5_2': 2,'3_00_0': 3,'3_a9_1': 4,
@@ -96,6 +97,7 @@ class PlantModule(LightningDataModule):
         self.data_val: Optional[Dataset] = None
         self.data_test: Optional[Dataset] = None
         self.label_type = label_type
+        self.fold = fold
         
     def json2cls(self,jsonfile): 
         label_type = []
@@ -172,7 +174,7 @@ class PlantModule(LightningDataModule):
         This method is called by lightning twice for `trainer.fit()` and `trainer.test()`, so be careful if you do a random split!
         The `stage` can be used to differentiate whether it's called before trainer.fit()` or `trainer.test()`."""
 
-        jpgpath, csvpath, labels = self.cross_validation(foldn = 0)
+        jpgpath, csvpath, labels = self.cross_validation(foldn = self.fold)
         
         # load datasets only if they're not loaded already
         if not self.data_train and not self.data_val and not self.data_test:

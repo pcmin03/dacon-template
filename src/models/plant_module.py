@@ -11,7 +11,8 @@ import pandas as pd
 # from src.models.components.simple_dense_net import SimpleDenseNet
 
 # from ..utils.general import label_decoder, PlantCheckpointer
-import torch.nn.functional as F 
+from ..utils.general import SAM, LabelSmoothingCrossEntropy
+import torch.nn.functional as F
 from joblib import Parallel, delayed
 import os
 from pathlib import Path
@@ -35,6 +36,8 @@ class PlantCls(LightningModule):
         model: Any, 
         lr: float = 0.001,
         weight_decay: float = 0.0005,
+        SAM: bool = False,
+        label_smoothing: float = 0.05,
     ):
         super().__init__()
         # self.label_decoder = {0: '0', 1: '00', 2: '1', 3: '1_00_0', 4: '2', 5: '2_00_0', 6: '2_a5_2', 7: '3', 8: '3_00_0', 9: '3_a9_1', 10: '3_a9_2', 11: '3_a9_3', 12: '3_b3_1', 13: '3_b6_1', 14: '3_b7_1', 15: '3_b8_1', 16: '4', 17: '4_00_0', 18: '5', 19: '5_00_0', 20: '5_a7_2', 21: '5_b6_1', 22: '5_b7_1', 23: '5_b8_1', 24: '6', 25: '6_00_0', 26: '6_a11_1', 27: '6_a11_2', 28: '6_a12_1', 29: '6_a12_2', 30: '6_b4_1', 31: '6_b4_3', 32: '6_b5_1', 33: 'a11', 34: 'a12', 35: 'a5', 36: 'a7', 37: 'a9', 38: 'b3', 39: 'b4', 40: 'b5', 41: 'b6', 42: 'b7', 43: 'b8'}
@@ -46,9 +49,7 @@ class PlantCls(LightningModule):
         model_parser = self.hparams.model
         
         
-        self.model = timm.create_model(model_parser.name,pretrained = model_parser.pretrained, num_classes = model_parser.num_classes)
-        
-        # import pdb;pdb.set_trace()
+        self.model = timm.create_model(model_parser.name, pretrained = model_parser.pretrained, num_classes = model_parser.num_classes)
 
         # if hasattr(model_parser, 'init_weight'):
         #     # if model_parser.init_weight in locals():
@@ -60,10 +61,15 @@ class PlantCls(LightningModule):
         # if model_parser.init_weight in locals():
         #     checkpointer = PlantCheckpointer(model=self.model)
         #     checkpointer.load(model_parser.init_weight)
-
+        self.SAM = self.hparams.SAM
+        if self.SAM == True:
+            self.automatic_optimization = False
 
         # loss function
-        self.criterion = torch.nn.CrossEntropyLoss()
+        if self.hparams.label_smoothing == 0.0:
+            self.criterion = torch.nn.CrossEntropyLoss()
+        else:
+            self.criterion = LabelSmoothingCrossEntropy(epsilon=self.hparams.label_smoothing)
 
         # use separate metric instance for train, val and test step
         # to ensure a proper reduction over the epoch
@@ -90,10 +96,24 @@ class PlantCls(LightningModule):
         logits = self.forward(x)
         loss = self.criterion(logits, y)
         preds = torch.argmax(logits, dim=1)
+        
+        preds = torch.argmax(logits, dim=1)
         return loss, preds, y
 
     def training_step(self, batch: Any, batch_idx: int):
         loss, preds, targets = self.step(batch)
+
+        if self.SAM == True:
+            
+            optimizer = self.optimizers()
+            self.manual_backward(loss)
+            optimizer.first_step(zero_grad=True)
+
+            loss_2, _, _ = self.step(batch)
+            self.manual_backward(loss_2)
+            optimizer.second_step(zero_grad=True)
+
+            self.trainer.train_loop.running_loss.append(loss)
 
         # log train metrics
         acc = self.train_acc(preds, targets)
@@ -178,12 +198,17 @@ class PlantCls(LightningModule):
             params=self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay
         )
 
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[50,80], gamma=0.1, last_epoch=-1, verbose=False)
+        if self.SAM == True:
+            base_optimizer = torch.optim.SGD
+            optimizer = SAM(self.parameters(), base_optimizer, lr=self.hparams.lr)
+
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[20,35], gamma=0.1, last_epoch=-1, verbose=False)
 
         lr_scheduler_config = {
             "scheduler": scheduler,
             "interval": "epoch",
             "frequency":1,
+            "monitor": "metric_to_track",
         }
         
         # return optimizer

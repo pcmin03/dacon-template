@@ -1,8 +1,11 @@
 _target_: src.models.plant_module.PlantCls
 
 model:
-  name : efficientnet_b1
+  name : swin_base_patch4_window12_384_in22k
   pretrained : True
   num_classes : 44
 lr: 0.001
 weight_decay: 0.0005
+
+label_smoothing: 0.0
+SAM: False # only support 32bit

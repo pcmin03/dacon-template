@@ -8,8 +8,6 @@ from torchmetrics import MaxMetric, F1
 from torchmetrics.classification.accuracy import Accuracy
 
 import pandas as pd
-
-import ttach as tta
 # from src.models.components.simple_dense_net import SimpleDenseNet
 
 # from ..utils.general import label_decoder, PlantCheckpointer
@@ -18,6 +16,7 @@ import torch.nn.functional as F
 from joblib import Parallel, delayed
 import os
 from pathlib import Path
+
 class PlantCls(LightningModule):
     """
     Example of LightningModule for MNIST classification.
@@ -42,17 +41,24 @@ class PlantCls(LightningModule):
         label_smoothing: float = 0.05,
     ):
         super().__init__()
-        # self.label_decoder = {0: '0', 1: '00', 2: '1', 3: '1_00_0', 4: '2', 5: '2_00_0', 6: '2_a5_2', 7: '3', 8: '3_00_0', 9: '3_a9_1', 10: '3_a9_2', 11: '3_a9_3', 12: '3_b3_1', 13: '3_b6_1', 14: '3_b7_1', 15: '3_b8_1', 16: '4', 17: '4_00_0', 18: '5', 19: '5_00_0', 20: '5_a7_2', 21: '5_b6_1', 22: '5_b7_1', 23: '5_b8_1', 24: '6', 25: '6_00_0', 26: '6_a11_1', 27: '6_a11_2', 28: '6_a12_1', 29: '6_a12_2', 30: '6_b4_1', 31: '6_b4_3', 32: '6_b5_1', 33: 'a11', 34: 'a12', 35: 'a5', 36: 'a7', 37: 'a9', 38: 'b3', 39: 'b4', 40: 'b5', 41: 'b6', 42: 'b7', 43: 'b8'}
-        # self.label_decoder = self.trainer.datamodule
-        
         # this line allows to access init params with 'self.hparams' attribute
         # it also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
         model_parser = self.hparams.model
-
-        self.first_test = True
+        
         
         self.model = timm.create_model(model_parser.name, pretrained = model_parser.pretrained, num_classes = model_parser.num_classes)
+
+        # if hasattr(model_parser, 'init_weight'):
+        #     # if model_parser.init_weight in locals():
+        #     # weight = torch.load(model_parser.init_weight)
+        # #     self.model.load_state_dict(weight, strict=False)
+        #     checkpointer = PlantCheckpointer(model=self.model)
+        #     checkpointer.load(model_parser.init_weight)
+
+        # if model_parser.init_weight in locals():
+        #     checkpointer = PlantCheckpointer(model=self.model)
+        #     checkpointer.load(model_parser.init_weight)
 
         self.SAM = self.hparams.SAM
         if self.SAM == True:
@@ -90,8 +96,21 @@ class PlantCls(LightningModule):
         loss = self.criterion(logits, y)
         preds = torch.argmax(logits, dim=1)
         
-        preds = torch.argmax(logits, dim=1)
         return loss, preds, y
+
+    def cutmix(self,batch:Any):
+        if self.hparams.cutmix > 0.5:
+            # generate mixed sample
+            lam = np.random.beta(0.3, 0.3)
+            rand_index = torch.randperm(input.size()[0]).cuda()
+            target_a = target
+            target_b = target[rand_index]
+            bbx1, bby1, bbx2, bby2 = rand_bbox(input.size(), lam)
+            input[:, :, bbx1:bbx2, bby1:bby2] = input[rand_index, :, bbx1:bbx2, bby1:bby2]
+            # adjust lambda to exactly match pixel ratio
+            lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (input.size()[-1] * input.size()[-2]))
+            output = self.model(input)
+            loss = self.criterion(output, target_a) * lam + self.criterion(output, target_b) * (1. - lam)
 
     def training_step(self, batch: Any, batch_idx: int):
         loss, preds, targets = self.step(batch)
@@ -145,9 +164,6 @@ class PlantCls(LightningModule):
         self.log("val/f1_best", self.val_f1_best.compute(), on_epoch=True, prog_bar=True)
 
     def test_step(self, batch: Any, batch_idx: int):
-        if self.first_test:
-            self.model = tta.ClassificationTTAWrapper(self.model, tta.aliases.d4_transform())
-            self.first_test = False
         preds = self.forward(batch[0])
         preds = torch.argmax(preds, dim=1).cpu().detach().numpy()
         
@@ -165,9 +181,11 @@ class PlantCls(LightningModule):
         # print(self.submission.loc[self.submission.image == int(idx),'label'])
         
     def test_epoch_end(self, outputs: List[Any]):
+        
+        
         self.submission = self.submission.sort_values(by='image')
 
-        self.submission.to_csv(f'sample.csv', index=False)
+        self.submission.to_csv(f'sampleas123df.csv', index=False)
         
         pass
 

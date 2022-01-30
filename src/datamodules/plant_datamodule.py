@@ -7,9 +7,6 @@ from pytorch_lightning import LightningDataModule
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
 from torchvision.transforms import transforms
 
-import albumentations as A
-from albumentations.pytorch import ToTensorV2
-
 from sklearn.model_selection import KFold,StratifiedKFold
 
 from tqdm import tqdm 
@@ -18,6 +15,9 @@ from .datasets.plant_dataset import Plant
 import json
 
 from pathlib import Path
+import albumentations as A
+from albumentations.pytorch.transforms import ToTensor
+
 class PlantModule(LightningDataModule):
     """
     Example of LightningDataModule for MNIST dataset.
@@ -40,11 +40,11 @@ class PlantModule(LightningDataModule):
         self,
         data_dir: str = "data/",
         test_data_dir : str = 'data/',
-        train_val_test_split: Tuple[int, int, int] = (55_000, 5_000, 10_000),
         batch_size: int = 64,
         num_workers: int = 0,
         pin_memory: bool = False,
         crop: bool = False,
+        training:bool = True,
         label_type: str = 'total',
         fold: int = 0
     ):
@@ -82,19 +82,23 @@ class PlantModule(LightningDataModule):
         # data transformations
         self.train_transforms = A.Compose(
             [
-                A.RandomResizedCrop(height=384, width=384),
-                A.RandomRotate90(p=0.5),
+                # transforms.Resize((224,224)),
                 A.HorizontalFlip(p=0.5),
-                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-                ToTensorV2(),
+                A.RandomRotate90(p=0.5),
+                A.RandomSizedCrop(min_max_height=(224,384),height=384,width=384),
+                A.Cutout(always_apply=True),
+                A.CLAHE(p=0.5),
+                # A.ColorJitter(p=0.5),
+                A.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+                ToTensor(),
             ]
         )
     
         self.test_transform = A.Compose(
             [
-                A.RandomCrop(height=384, width=384),
-                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-                ToTensorV2(),
+                # transforms.Resize((224,224)),
+                A.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+                ToTensor(),
             ]
         )
 
@@ -103,6 +107,7 @@ class PlantModule(LightningDataModule):
         self.data_test: Optional[Dataset] = None
         self.label_type = label_type
         self.fold = fold
+        self.training = training
         
     def json2cls(self,jsonfile): 
         label_type = []
@@ -158,7 +163,7 @@ class PlantModule(LightningDataModule):
             labels = np.array(labels[locat!=0]) - 1
             
             label_convert = {val-1:key for key,val in label_convert.items() if key!= 0}
-            
+
         label_list[:,-1] = labels
 
         self.label_decoder = {val:key for key, val in label_convert.items()}
@@ -188,13 +193,12 @@ class PlantModule(LightningDataModule):
             self.data_train = Plant(jpgpath[self.train_idx],labels[self.train_idx], mode='train', transform=self.train_transforms)
             self.data_val = Plant(jpgpath[self.valid_idx],labels[self.valid_idx], mode='valid', transform=self.test_transform)
 
-            
-            # if self.hparams.training  == True : 
-            self.data_test = self.data_val
+            # if self.training  == True : 
+            #     self.data_test = self.data_val
             # else : 
-            # test_path = Path(self.hparams.test_data_dir).resolve()
-            # test_jpg = np.array(list(test_path.glob('*/*.jpg')))
-            # self.data_test = Plant(test_jpg,None, mode='test', transform=self.test_transform)
+            test_path = Path(self.hparams.test_data_dir).resolve()
+            test_jpg = np.array(list(test_path.glob('*/*.jpg')))
+            self.data_test = Plant(test_jpg,None, mode='test', transform=self.test_transform)
 
     def train_dataloader(self):
         return DataLoader(

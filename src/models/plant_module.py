@@ -8,6 +8,8 @@ from torchmetrics import MaxMetric, F1
 from torchmetrics.classification.accuracy import Accuracy
 
 import pandas as pd
+
+import ttach as tta
 # from src.models.components.simple_dense_net import SimpleDenseNet
 
 # from ..utils.general import label_decoder, PlantCheckpointer
@@ -47,20 +49,11 @@ class PlantCls(LightningModule):
         # it also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
         model_parser = self.hparams.model
-        
+
+        self.first_test = True
         
         self.model = timm.create_model(model_parser.name, pretrained = model_parser.pretrained, num_classes = model_parser.num_classes)
 
-        # if hasattr(model_parser, 'init_weight'):
-        #     # if model_parser.init_weight in locals():
-        #     # weight = torch.load(model_parser.init_weight)
-        # #     self.model.load_state_dict(weight, strict=False)
-        #     checkpointer = PlantCheckpointer(model=self.model)
-        #     checkpointer.load(model_parser.init_weight)
-
-        # if model_parser.init_weight in locals():
-        #     checkpointer = PlantCheckpointer(model=self.model)
-        #     checkpointer.load(model_parser.init_weight)
         self.SAM = self.hparams.SAM
         if self.SAM == True:
             self.automatic_optimization = False
@@ -152,6 +145,9 @@ class PlantCls(LightningModule):
         self.log("val/f1_best", self.val_f1_best.compute(), on_epoch=True, prog_bar=True)
 
     def test_step(self, batch: Any, batch_idx: int):
+        if self.first_test:
+            self.model = tta.ClassificationTTAWrapper(self.model, tta.aliases.d4_transform())
+            self.first_test = False
         preds = self.forward(batch[0])
         preds = torch.argmax(preds, dim=1).cpu().detach().numpy()
         
@@ -169,7 +165,6 @@ class PlantCls(LightningModule):
         # print(self.submission.loc[self.submission.image == int(idx),'label'])
         
     def test_epoch_end(self, outputs: List[Any]):
-        
         self.submission = self.submission.sort_values(by='image')
 
         self.submission.to_csv(f'sample.csv', index=False)

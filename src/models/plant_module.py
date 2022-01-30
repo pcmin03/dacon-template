@@ -170,10 +170,9 @@ class PlantCls(LightningModule):
         
     def test_epoch_end(self, outputs: List[Any]):
         
-        
         self.submission = self.submission.sort_values(by='image')
 
-        self.submission.to_csv(f'sampleas123df.csv', index=False)
+        self.submission.to_csv(f'sample.csv', index=False)
         
         pass
 

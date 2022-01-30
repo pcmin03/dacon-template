@@ -7,6 +7,9 @@ from pytorch_lightning import LightningDataModule
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
 from torchvision.transforms import transforms
 
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
+
 from sklearn.model_selection import KFold,StratifiedKFold
 
 from tqdm import tqdm 
@@ -77,19 +80,21 @@ class PlantModule(LightningDataModule):
         self.save_hyperparameters(logger=False)
         
         # data transformations
-        self.train_transforms = transforms.Compose(
+        self.train_transforms = A.Compose(
             [
-                # transforms.Resize((224,224)),
-                transforms.ToTensor(),
-                transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+                A.RandomResizedCrop(height=384, width=384),
+                A.RandomRotate90(p=0.5),
+                A.HorizontalFlip(p=0.5),
+                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+                ToTensorV2(),
             ]
         )
     
-        self.test_transform = transforms.Compose(
+        self.test_transform = A.Compose(
             [
-                # transforms.Resize((224,224)),
-                transforms.ToTensor(),
-                transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+                A.RandomCrop(height=384, width=384),
+                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+                ToTensorV2(),
             ]
         )
 

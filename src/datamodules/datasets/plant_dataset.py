@@ -23,16 +23,16 @@ class Plant(Dataset):
         
         img = cv2.imread(str(self.img_paths[idx]))[...,::-1]
 
-        img = cv2.resize(img, (384,384))
+        img = cv2.resize(img, (416,416))
 
         if self.mode=='train':  
-          img = self.transform(img)
+          img = self.transform(image=img)['image']
           
         elif self.mode=='valid':  
-          img = self.transform(img)
+          img = self.transform(image=img)['image']
           
         elif self.mode=='test':
-          img = self.transform(img) 
+          img = self.transform(image=img)['image']
           return img,self.img_paths[idx].name.replace('.jpg','')
 
         

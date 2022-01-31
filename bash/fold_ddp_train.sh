@@ -8,14 +8,12 @@ cd ../
 #                                                     model.model.num_classes=19 \
 #                                                     model.model.name=swin_large_patch4_window7_224_in22k
 
-for fold in 2 3 4
+for fold in 0 1 2 3 4
 do
-    CUDA_VISIBLE_DEVICES=2,3,4,5,6,7 python run.py datamodule.batch_size=100 trainer.gpus=6 +trainer.num_nodes=1 +trainer.strategy=ddp +trainer.precision=32 \
-                                                        datamodule.data_dir=/nfs2/personal/cmpark/dacon/dataset/train \
+    CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 python run.py datamodule.batch_size=8 trainer.gpus=8 +trainer.num_nodes=1 +trainer.strategy=ddp +trainer.precision=32 \
+                                                        datamodule.data_dir=/pathos2/nfs2/personal/cmpark/dacon/dataset/train \
                                                         datamodule.label_type=total datamodule.fold=$fold \
-                                                        model.model.name=convnext_xlarge_384_in22ft1k \
-                                                        model.model.num_classes=25 model.lr=1e-2 trainer.max_epochs=100 +model.SAM=True +model.label_smoothing=0.05 \
-                                                        +model.cutmix=0.5
+                                                        model.model.num_classes=25 model.lr=1e-2 trainer.max_epochs=100 model.SAM=True model.label_smoothing=0.05
                                                         # datamodule.crop=True \
                                                         # /pathos2/data2/dongheekim/Plant/dacon-template/data/train
 done

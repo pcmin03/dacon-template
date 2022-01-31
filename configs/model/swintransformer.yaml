@@ -9,3 +9,4 @@ weight_decay: 0.0005
 
 label_smoothing: 0.0
 SAM: False # only support 32bit
+cutmix : 0.5

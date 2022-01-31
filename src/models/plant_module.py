@@ -8,14 +8,17 @@ from torchmetrics import MaxMetric, F1
 from torchmetrics.classification.accuracy import Accuracy
 
 import pandas as pd
+
+import ttach as tta
 # from src.models.components.simple_dense_net import SimpleDenseNet
 
 # from ..utils.general import label_decoder, PlantCheckpointer
-from ..utils.general import SAM, LabelSmoothingCrossEntropy
+from ..utils.general import SAM, LabelSmoothingCrossEntropy,rand_bbox
 import torch.nn.functional as F
 from joblib import Parallel, delayed
 import os
 from pathlib import Path
+import numpy as np 
 
 class PlantCls(LightningModule):
     """
@@ -39,6 +42,7 @@ class PlantCls(LightningModule):
         weight_decay: float = 0.0005,
         SAM: bool = False,
         label_smoothing: float = 0.05,
+        cutmix : float = 0.05
     ):
         super().__init__()
         # this line allows to access init params with 'self.hparams' attribute
@@ -46,7 +50,7 @@ class PlantCls(LightningModule):
         self.save_hyperparameters(logger=False)
         model_parser = self.hparams.model
         
-        
+        self.first_test = True
         self.model = timm.create_model(model_parser.name, pretrained = model_parser.pretrained, num_classes = model_parser.num_classes)
 
         # if hasattr(model_parser, 'init_weight'):
@@ -89,6 +93,25 @@ class PlantCls(LightningModule):
     def forward(self, x: torch.Tensor):
         return self.model(x)
 
+    def cutmix_step(self,batch:Any):        
+        x, y = batch
+        # generate mixed sample
+        lam = np.random.beta(0.3, 0.3)
+        rand_index = torch.randperm(x.size()[0]).cuda()
+        target_a = y
+        target_b = y[rand_index]
+        bbx1, bby1, bbx2, bby2 = rand_bbox(x.size(), lam)
+        x[:, :, bbx1:bbx2, bby1:bby2] = x[rand_index, :, bbx1:bbx2, bby1:bby2]
+        # adjust lambda to exactly match pixel ratio
+        lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (x.size()[-1] * x.size()[-2]))
+
+        logits = self.forward(x)
+        loss = self.criterion(logits, target_a) * lam + self.criterion(logits, target_b) * (1. - lam)
+        preds = torch.argmax(logits, dim=1)
+        
+        return loss, preds, y
+
+
     def step(self, batch: Any):
         x, y = batch
         
@@ -98,22 +121,11 @@ class PlantCls(LightningModule):
         
         return loss, preds, y
 
-    def cutmix(self,batch:Any):
-        if self.hparams.cutmix > 0.5:
-            # generate mixed sample
-            lam = np.random.beta(0.3, 0.3)
-            rand_index = torch.randperm(input.size()[0]).cuda()
-            target_a = target
-            target_b = target[rand_index]
-            bbx1, bby1, bbx2, bby2 = rand_bbox(input.size(), lam)
-            input[:, :, bbx1:bbx2, bby1:bby2] = input[rand_index, :, bbx1:bbx2, bby1:bby2]
-            # adjust lambda to exactly match pixel ratio
-            lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (input.size()[-1] * input.size()[-2]))
-            output = self.model(input)
-            loss = self.criterion(output, target_a) * lam + self.criterion(output, target_b) * (1. - lam)
-
     def training_step(self, batch: Any, batch_idx: int):
-        loss, preds, targets = self.step(batch)
+        if self.hparams.cutmix > 0.5:
+            loss, preds, targets = self.cutmix_step(batch)
+        else:
+            loss, preds, targets = self.step(batch)
 
         if self.SAM == True:
             
@@ -164,6 +176,10 @@ class PlantCls(LightningModule):
         self.log("val/f1_best", self.val_f1_best.compute(), on_epoch=True, prog_bar=True)
 
     def test_step(self, batch: Any, batch_idx: int):
+        if self.first_test:
+            self.model = tta.ClassificationTTAWrapper(self.model, tta.aliases.d4_transform())
+            self.first_test = False
+            
         preds = self.forward(batch[0])
         preds = torch.argmax(preds, dim=1).cpu().detach().numpy()
         

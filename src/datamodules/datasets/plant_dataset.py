@@ -23,7 +23,7 @@ class Plant(Dataset):
         
         img = cv2.imread(str(self.img_paths[idx]))[...,::-1]
 
-        img = cv2.resize(img, (416,416))
+        img = cv2.resize(img, (384,384))
 
         if self.mode=='train':  
           img = self.transform(image=img)['image']

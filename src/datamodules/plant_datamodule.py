@@ -85,7 +85,7 @@ class PlantModule(LightningDataModule):
                 # transforms.Resize((224,224)),
                 A.HorizontalFlip(p=0.5),
                 A.RandomRotate90(p=0.5),
-                A.RandomSizedCrop(min_max_height=(224,384),height=384,width=384),
+                # A.RandomSizedCrop(min_max_height=(224,384),height=384,width=384),
                 A.Cutout(always_apply=True),
                 A.CLAHE(p=0.5),
                 # A.ColorJitter(p=0.5),
@@ -142,6 +142,7 @@ class PlantModule(LightningDataModule):
         label_list = np.array(Parallel(n_jobs=32,prefer="threads")(delayed(self.json2cls)(i) for i in tqdm(train_json)))
         
         if self.label_type == 'total': 
+            
             labels = np.array([self.total_label[k] for k in label_list[:,-1]])
             label_convert = self.total_label
         elif self.label_type == 'binary': 
@@ -194,7 +195,7 @@ class PlantModule(LightningDataModule):
             self.data_val = Plant(jpgpath[self.valid_idx],labels[self.valid_idx], mode='valid', transform=self.test_transform)
 
             # if self.training  == True : 
-            #     self.data_test = self.data_val
+            # self.data_test = self.data_val
             # else : 
             test_path = Path(self.hparams.test_data_dir).resolve()
             test_jpg = np.array(list(test_path.glob('*/*.jpg')))

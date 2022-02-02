@@ -181,7 +181,7 @@ class PlantCls(LightningModule):
             self.first_test = False
             
         preds = self.forward(batch[0])
-        prob = F.softmax(preds)
+        prob = F.softmax(preds).max(1).values.cpu().numpy()
         preds = torch.argmax(preds, dim=1).cpu().detach().numpy()
         
         # lst = Parallel(n_jobs=16,prefer="threads")(delayed(self.write_csv)(i,j) for i,j in zip(batch[1],preds))

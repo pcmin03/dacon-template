@@ -88,7 +88,7 @@ class PlantCls(LightningModule):
         self.val_acc_best = MaxMetric()
         self.val_f1_best = MaxMetric()
         # self.submission = pd.read_csv('/nfs2/personal/cmpark/dacon/dataset/sample_submission.csv')
-        self.submission = pd.DataFrame(columns=['image','label'])
+        self.submission = pd.DataFrame(columns=['image','label','probability'])
 
     def forward(self, x: torch.Tensor):
         return self.model(x)
@@ -181,18 +181,19 @@ class PlantCls(LightningModule):
             self.first_test = False
             
         preds = self.forward(batch[0])
+        prob = F.softmax(preds)
         preds = torch.argmax(preds, dim=1).cpu().detach().numpy()
         
         # lst = Parallel(n_jobs=16,prefer="threads")(delayed(self.write_csv)(i,j) for i,j in zip(batch[1],preds))
-        for i,j in zip(batch[1],preds):
-            self.write_csv(i,j)
+        for i,j,k in zip(batch[1],preds, prob):
+            self.write_csv(i,j,k)
         
         # self.submission.to_csv(f'sample{batch_idx}.csv')
         # return {"preds": preds,"idxs":batch[1]}
-    def write_csv(self,idx,preds):
+    def write_csv(self,idx,preds,prob):
         
         label_name = self.trainer.datamodule.label_decoder[preds]
-        self.submission = self.submission.append({'image':int(idx),'label':str(label_name)} , ignore_index=True)
+        self.submission = self.submission.append({'image':int(idx),'label':str(label_name),'probability':str(prob)} , ignore_index=True)
         # self.submission.loc[self.submission.image == int(idx),'label'] = str(label_name)
         # print(self.submission.loc[self.submission.image == int(idx),'label'])
         

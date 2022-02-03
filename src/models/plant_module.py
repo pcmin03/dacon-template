@@ -1,3 +1,4 @@
+
 from typing import Any, List
 
 import torch
@@ -19,6 +20,7 @@ from joblib import Parallel, delayed
 import os
 from pathlib import Path
 import numpy as np 
+
 
 class PlantCls(LightningModule):
     """
@@ -51,6 +53,7 @@ class PlantCls(LightningModule):
         model_parser = self.hparams.model
         
         self.first_test = True
+        
         self.model = timm.create_model(model_parser.name, pretrained = model_parser.pretrained, num_classes = model_parser.num_classes)
 
         # if hasattr(model_parser, 'init_weight'):
@@ -88,13 +91,16 @@ class PlantCls(LightningModule):
         self.val_acc_best = MaxMetric()
         self.val_f1_best = MaxMetric()
         # self.submission = pd.read_csv('/nfs2/personal/cmpark/dacon/dataset/sample_submission.csv')
-        self.submission = pd.DataFrame(columns=['image','label','probability'])
+        self.submission = pd.DataFrame(columns=['image','label'])
 
+        
     def forward(self, x: torch.Tensor):
         return self.model(x)
 
     def cutmix_step(self,batch:Any):        
-        x, y = batch
+        x = batch['img']
+        y = batch['label']
+
         # generate mixed sample
         lam = np.random.beta(0.3, 0.3)
         rand_index = torch.randperm(x.size()[0]).cuda()
@@ -113,8 +119,9 @@ class PlantCls(LightningModule):
 
 
     def step(self, batch: Any):
-        x, y = batch
-        
+        x = batch['img']
+        y = batch['label']
+
         logits = self.forward(x)
         loss = self.criterion(logits, y)
         preds = torch.argmax(logits, dim=1)
@@ -175,6 +182,7 @@ class PlantCls(LightningModule):
         self.log("val/acc_best", self.val_acc_best.compute(), on_epoch=True, prog_bar=True)
         self.log("val/f1_best", self.val_f1_best.compute(), on_epoch=True, prog_bar=True)
 
+
     def test_step(self, batch: Any, batch_idx: int):
         if self.first_test:
             self.model = tta.ClassificationTTAWrapper(self.model, tta.aliases.d4_transform())
@@ -229,9 +237,13 @@ class PlantCls(LightningModule):
 
         if self.SAM == True:
             base_optimizer = torch.optim.SGD
+            # base_optimizer = torch.optim.AdamW
             optimizer = SAM(self.parameters(), base_optimizer, lr=self.hparams.lr)
+            # optimizer = torch.optim.AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=5e-2)
 
         scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[20,35], gamma=0.1, last_epoch=-1, verbose=False)
+        # scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,T_0=50, T_mult=2, eta_min=0,last_epoch=-1, verbose=False)
+        # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=92 * 300 * 1.2) # epoch 25 step 92
 
         lr_scheduler_config = {
             "scheduler": scheduler,

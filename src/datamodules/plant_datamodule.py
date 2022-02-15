@@ -18,6 +18,20 @@ from pathlib import Path
 import albumentations as A
 from albumentations.pytorch.transforms import ToTensor
 
+def load_augmentation_object(input_list, bbox_params=None):
+    if isinstance(input_list, A.Compose):
+        return input_list
+    try:
+        aug_list = [instantiate(i, _recursive_=False) for i in input_list]
+    except:
+        aug_list = input_list
+    if bbox_params is None:
+        return A.Compose(aug_list)
+    if isinstance(bbox_params, A.BboxParams):
+        return A.Compose(aug_list, bbox_params=bbox_params)
+    return A.Compose(aug_list, bbox_params=OmegaConf.to_container(bbox_params))
+
+
 class PlantModule(LightningDataModule):
     """
     Example of LightningDataModule for MNIST dataset.
@@ -79,28 +93,19 @@ class PlantModule(LightningDataModule):
         # this line allows to access init params with 'self.hparams' attribute
         self.save_hyperparameters(logger=False)
         
-        # data transformations
-        self.train_transforms = A.Compose(
-            [
-                # transforms.Resize((224,224)),
-                A.HorizontalFlip(p=0.5),
-                A.RandomRotate90(p=0.5),
-                # A.RandomSizedCrop(min_max_height=(224,384),height=384,width=384),
-                A.Cutout(always_apply=True),
-                A.CLAHE(p=0.5),
-                # A.ColorJitter(p=0.5),
-                A.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-                ToTensor(),
-            ]
+        self.train_transform = (
+            None
+            if self.hparams.train_augmentation_list is None
+            else load_augmentation_object(self.hparams.train_augmentation_list)
         )
-    
-        self.test_transform = A.Compose(
-            [
-                # transforms.Resize((224,224)),
-                A.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-                ToTensor(),
-            ]
+        
+        self.valid_transform = (
+            None
+            if self.hparams.valid_augmentation_list is None
+            else load_augmentation_object(self.hparams.valid_augmentation_list)
         )
+        
+
 
         self.data_train: Optional[Dataset] = None
         self.data_val: Optional[Dataset] = None

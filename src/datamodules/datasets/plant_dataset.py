@@ -23,7 +23,7 @@ class Plant(Dataset):
         
         img = cv2.imread(str(self.img_paths[idx]))[...,::-1]
 
-        img = cv2.resize(img, (384,384))
+        # img = cv2.resize(img, (384,384))
 
         if self.mode=='train':  
           img = self.transform(image=img)['image']
@@ -33,9 +33,9 @@ class Plant(Dataset):
           
         elif self.mode=='test':
           img = self.transform(image=img)['image']
-          return img,self.img_paths[idx].name.replace('.jpg','')
+          return {'img':img,'label':self.img_paths[idx].name.replace('.jpg','')}
 
         
         label = int(self.labels[idx][-1])
         
-        return img, label
+        return {'img':img, 'label':label}

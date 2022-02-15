@@ -188,12 +188,12 @@ class PlantCls(LightningModule):
             self.model = tta.ClassificationTTAWrapper(self.model, tta.aliases.d4_transform())
             self.first_test = False
             
-        preds = self.forward(batch[0])
+        preds = self.forward(batch['img'])
         prob = F.softmax(preds).max(1).values.cpu().numpy()
         preds = torch.argmax(preds, dim=1).cpu().detach().numpy()
         
         # lst = Parallel(n_jobs=16,prefer="threads")(delayed(self.write_csv)(i,j) for i,j in zip(batch[1],preds))
-        for i,j,k in zip(batch[1],preds, prob):
+        for i,j,k in zip(batch['label'],preds, prob):
             self.write_csv(i,j,k)
         
         # self.submission.to_csv(f'sample{batch_idx}.csv')
@@ -207,9 +207,7 @@ class PlantCls(LightningModule):
         
     def test_epoch_end(self, outputs: List[Any]):
         
-        
         self.submission = self.submission.sort_values(by='image')
-
         self.submission.to_csv(f'sampleas123df.csv', index=False)
         
         pass
@@ -224,6 +222,26 @@ class PlantCls(LightningModule):
         self.test_f1.reset()
         self.val_f1.reset()
 
+    # def optimizer_step(
+    #     self,
+    #     epoch,
+    #     batch_idx,
+    #     optimizer,
+    #     optimizer_idx,
+    #     optimizer_closure,
+    #     on_tpu=False,
+    #     using_native_amp=False,
+    #     using_lbfgs=False,
+    # ):
+    #     # skip the first 500 steps
+    #     if self.trainer.global_step < 500:
+    #         lr_scale = min(1.0, float(self.trainer.global_step + 1) / 500.0)
+    #         for pg in optimizer.param_groups:
+    #             pg["lr"] = lr_scale * self.hparams.learning_rate
+
+    #     # update params
+    #     optimizer.step(closure=optimizer_closure)
+        
     def configure_optimizers(self):
         """Choose what optimizers and learning-rate schedulers to use in your optimization.
         Normally you'd need one. But in the case of GANs or similar you might have multiple.
@@ -236,13 +254,19 @@ class PlantCls(LightningModule):
         )
 
         if self.SAM == True:
-            base_optimizer = torch.optim.SGD
-            # base_optimizer = torch.optim.AdamW
+            # base_optimizer = torch.optim.SGD
+            base_optimizer = torch.optim.AdamW
             optimizer = SAM(self.parameters(), base_optimizer, lr=self.hparams.lr)
             # optimizer = torch.optim.AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=5e-2)
 
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[20,35], gamma=0.1, last_epoch=-1, verbose=False)
-        # scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,T_0=50, T_mult=2, eta_min=0,last_epoch=-1, verbose=False)
+        # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[20,35], gamma=0.1, last_epoch=-1, verbose=False)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,T_0=50, T_mult=2, eta_min=0,last_epoch=-1, verbose=False)
+        
+        # if self.trainer.global_epoch < 500:
+        #     lr_scale = min(1.0, float(self.trainer.global_epoch + 1) / 500.0)
+        #     for pg in optimizer.param_groups:
+        #         pg["lr"] = lr_scale * self.hparams.lr
+                
         # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=92 * 300 * 1.2) # epoch 25 step 92
 
         lr_scheduler_config = {
